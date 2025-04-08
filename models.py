@@ -43,3 +43,14 @@ class PositionalEmbedding(nn.Module):
         x = x + (self.pe[:, :x.shape[1], :]).requires_grad(False) # Here, the pe has been registered, so it is ok to not add the `requires_grad` part. It is not learned by default
         return self.dropout(x)
 
+class LayerNormalization(nn.Module):
+    def __init__(self, eps: float = 1e-6):
+        super().__init__()
+        self.eps = eps
+        self.alpha = nn.Parameter(torch.ones(1))
+        self.bias = nn.Parameter(torch.zeros(1))
+    
+    def forward(self, x:torch.Tensor):
+        mean = x.mean(dim = -1, keepdim=True)
+        std = x.std(dim = -1, keepdim=True)
+        return self.alpha * (x - mean) / (std + self.eps) + self.bias
