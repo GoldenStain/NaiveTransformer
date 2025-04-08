@@ -108,3 +108,14 @@ class MultiHeadAttentionBlock(nn.Module):
         # x: (batch_size, h, seq_len, d_k) -> (batch_size, seq_len, d_model)
         x = x.transpose(1, 2).contiguous().view(x.shape[0], -1, self.h * self.d_k)
         return self.w_o(x)
+
+class ResidualConnection(nn.Module):
+    def __init__(self, dropout: float) -> None:
+        super().__init__()
+        self.dropout = nn.Dropout(dropout)
+        self.norm = LayerNormalization()
+
+    def forward(self, x: torch.Tensor, sublayer: nn.Module) -> torch.Tensor:
+        # in the original paper, they first apply sublayer then norm, but we switch the order here.
+        # sublayer: the layer that the ResidualConnection connects
+        return x + self.dropout(sublayer(self.norm(x)))
