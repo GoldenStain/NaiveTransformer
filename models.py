@@ -29,7 +29,7 @@ class PositionalEmbedding(nn.Module):
         # the denominator array
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000) / d_model))
 
-        # If we mutiply position by div_term, then we will trigger the broadcast funciton and we will have a tesor(seq_len, d_model)
+        # If we mutiply position by div_term, then we will trigger the broadcast funciton and we will have a tesor(seq_len, d_model//2)
         pe[:, 0::2] = torch.sin(position*div_term)
         pe[:, 1::2] = torch.cos(position*div_term)
 
