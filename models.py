@@ -160,3 +160,17 @@ class DecoderBlock(nn.Module):
         x = self.residual_connections[2](x, self.feed_forward_block)
         return x
     
+class Decoder(nn.Module):
+    def __init__(self, layers: nn.ModuleList):
+        super().__init__()
+        self.layers = layers
+        self.norm = LayerNormalization()
+
+    def forward(self, x: torch.Tensor, encoder_output: torch.Tensor, encoder_mask: torch.Tensor, decoder_mask: torch.Tensor):
+        for layer in self.layers:
+            x = layer(x, encoder_output, encoder_mask, decoder_mask)
+
+        x = self.norm(x)
+        return x
+    
+
