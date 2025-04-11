@@ -1,8 +1,10 @@
+from typing import Generator, Dict, Any
+
 import torch
 import torch.nn as nn
 from torch.utils.data import random_split
 
-from datasets import load_dataset
+from datasets import load_dataset, Dataset as HFDataSet
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
@@ -10,11 +12,11 @@ from tokenizers.pre_tokenizers import Whitespace
 
 from pathlib import Path
 
-def get_all_sentences(ds, lang):
+def get_all_sentences(ds: HFDataSet, lang: str) -> Generator[str, None, None]:
     for item in ds:
         yield item['translation'][lang]
 
-def get_or_build_tokenizer(config, ds, lang):
+def get_or_build_tokenizer(config: Dict[str, Any], ds: HFDataSet, lang: str) -> Tokenizer:
     # .format: insert lang into the {} of the str
     tokenizer_path = Path(config['tokenizer_path'].format(lang))
     if not Path.exists(tokenizer_path):
@@ -27,7 +29,8 @@ def get_or_build_tokenizer(config, ds, lang):
         tokenizer = Tokenizer.from_file(str(tokenizer_path))
     return tokenizer
 
-def get_ds(config):
+# TODO: add type annotation when dataset.py is done.
+def get_ds(config: Dict[str, Any]):
     ds_raw = load_dataset('opus_books', f'{config['lang_src']}-{config['lang_tgt']}', split='train')
     
     # tokenizers
