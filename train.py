@@ -9,6 +9,10 @@ from tokenizers.pre_tokenizers import Whitespace
 
 from pathlib import Path
 
+def get_all_sentences(ds, lang):
+    for item in ds:
+        yield item['translation'][lang]
+
 def get_or_build_tokenizer(config, ds, lang):
     # .format: insert lang into the {} of the str
     tokenizer_path = Path(config['tokenizer_path'].format(lang))
