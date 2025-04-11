@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import random_split
 
-from datasets import load_dataset, Dataset as HFDataSet
+from datasets import load_dataset, Dataset as HFDataset
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.trainers import WordLevelTrainer
@@ -12,11 +12,11 @@ from tokenizers.pre_tokenizers import Whitespace
 
 from pathlib import Path
 
-def get_all_sentences(ds: HFDataSet, lang: str) -> Generator[str, None, None]:
+def get_all_sentences(ds: HFDataset, lang: str) -> Generator[str, None, None]:
     for item in ds:
         yield item['translation'][lang]
 
-def get_or_build_tokenizer(config: Dict[str, Any], ds: HFDataSet, lang: str) -> Tokenizer:
+def get_or_build_tokenizer(config: Dict[str, Any], ds: HFDataset, lang: str) -> Tokenizer:
     # .format: insert lang into the {} of the str
     tokenizer_path = Path(config['tokenizer_path'].format(lang))
     if not Path.exists(tokenizer_path):

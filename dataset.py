@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
 
-from datasets import Dataset as HFDataSet
+from datasets import Dataset as HFDataset
 
 from tokenizers import Tokenizer
 
 class BilinguaDataset(Dataset):
-    def __init__(self, ds: HFDataSet, tokenizer_src: Tokenizer, tokenizer_tgt: Tokenizer, src_lang: str, tgt_lang: str, seq_len: int) -> None:
+    def __init__(self, ds: HFDataset, tokenizer_src: Tokenizer, tokenizer_tgt: Tokenizer, src_lang: str, tgt_lang: str, seq_len: int) -> None:
         super().__init__()
         self.seq_len = seq_len
         self.ds = ds
@@ -90,4 +90,5 @@ class BilinguaDataset(Dataset):
 
 
 def causal_mask(size: int) -> torch.Tensor:
-    pass
+    mask = torch.triu(torch.ones(1, size, size), diagonal=1).type(torch.int)
+    return mask == 0
