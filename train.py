@@ -13,6 +13,7 @@ from tokenizers.pre_tokenizers import Whitespace
 from pathlib import Path
 
 from dataset import BilinguaDataset
+from models import build_transformer
 
 def get_all_sentences(ds: HFDataset, lang: str) -> Generator[str, None, None]:
     for item in ds:
@@ -64,4 +65,6 @@ def get_ds(config: Dict[str, Any]) -> tuple:
 
     return train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt
 
-def get_model()
+def get_model(config: Dict[str, Any], src_vocab_len: int, tgt_vocab_len: int):
+    model = build_transformer(src_vocab_len, tgt_vocab_len, config['seq_len']) # We will leave other parameters to default
+    return model
