@@ -66,5 +66,5 @@ def get_ds(config: Dict[str, Any]) -> tuple:
     return train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt
 
 def get_model(config: Dict[str, Any], src_vocab_len: int, tgt_vocab_len: int):
-    model = build_transformer(src_vocab_len, tgt_vocab_len, config['seq_len']) # We will leave other parameters to default
+    model = build_transformer(src_vocab_len, tgt_vocab_len, config['seq_len'], config['d_model']) # We will leave other parameters to default
     return model
