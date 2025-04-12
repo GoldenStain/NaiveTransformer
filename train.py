@@ -62,4 +62,6 @@ def get_ds(config: Dict[str, Any]) -> tuple:
     train_dataloader = DataLoader(train_ds, batch_size=config['batch_size'], shuffle=True)
     val_dataloader = DataLoader(val_ds, batch_size=1, shuffle=True) # We want to check the sentences one by one, so the batch_size here is 1
 
-    return train_dataloader, val_dataloader
+    return train_dataloader, val_dataloader, tokenizer_src, tokenizer_tgt
+
+def get_model()
