@@ -14,6 +14,7 @@ from pathlib import Path
 
 from dataset import BilinguaDataset
 from models import build_transformer
+from config import get_weights_file_path
 
 def get_all_sentences(ds: HFDataset, lang: str) -> Generator[str, None, None]:
     for item in ds:
