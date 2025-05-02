@@ -15,7 +15,7 @@ from pathlib import Path
 
 from dataset import BilinguaDataset
 from models import build_transformer
-from config import get_weights_file_path,  latest_weights_file_path
+from config import get_weights_file_path,  latest_weights_file_path, get_config
 
 from tqdm import tqdm
 
@@ -42,9 +42,13 @@ def get_or_build_tokenizer(config: Dict[str, Any], ds: HFDataset, lang: str) -> 
 
 
 def get_ds(config: Dict[str, Any]) -> tuple:
+    # prepare the cache dir
+    cache_dir = Path("~/datasets").expanduser().resolve()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
     torch.manual_seed(config.get('random_seed', 42))
     ds_raw = load_dataset(
-        'opus_books', f'{config['lang_src']}-{config['lang_tgt']}', split='train')
+        'opus_books', f'{config['lang_src']}-{config['lang_tgt']}', split='train', cache_dir=str(cache_dir))
 
     # tokenizers
     tokenizer_src = get_or_build_tokenizer(config, ds_raw, config['lang_src'])
@@ -88,6 +92,10 @@ def get_model(config: Dict[str, Any], src_vocab_len: int, tgt_vocab_len: int):
     model = build_transformer(
         src_vocab_len, tgt_vocab_len, config['seq_len'], config['d_model'])
     return model
+
+
+def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, device, print_msg, global_step, writer, num_examples=2):
+    ...
 
 
 def train_model(config: dict):
@@ -141,26 +149,34 @@ def train_model(config: dict):
     for epoch in range(initial_epoch, config['num_epochs']):
         torch.cuda.empty_cache()
         model.train()
-        batch_iterator = tqdm(train_dataloader, desc=f"Processing Epoch {epoch:02d}")
+        batch_iterator = tqdm(
+            train_dataloader, desc=f"Processing Epoch {epoch:02d}")
         for batch in batch_iterator:
             # clear the grad
             optimizer.zero_grad(set_to_none=True)
 
-            encoder_input = batch['encoder_input'].to(device) # (B, seq_len)
-            decoder_input = batch['decoder_input'].to(device) # (B, seq_len)
-            encoder_mask = batch['encoder_mask'].to(device) # (B, 1, 1, seq_len)
-            decoder_mask = batch['decoder_mask'].to(device) # (B, 1, seq_len, seq_len)
+            encoder_input = batch['encoder_input'].to(device)  # (B, seq_len)
+            decoder_input = batch['decoder_input'].to(device)  # (B, seq_len)
+            encoder_mask = batch['encoder_mask'].to(
+                device)  # (B, 1, 1, seq_len)
+            decoder_mask = batch['decoder_mask'].to(
+                device)  # (B, 1, seq_len, seq_len)
 
             # Run tensors through the transformer model
-            encoder_output = model.encode(encoder_input, encoder_mask) # (B, seq_len, d_model)
-            decoder_output = model.decode(decoder_input, encoder_output, encoder_mask, decoder_mask) # (B, seq_len, d_model)
-            proj_output = model.project(decoder_output) # (B, seq_len, vocab_size)
+            encoder_output = model.encode(
+                encoder_input, encoder_mask)  # (B, seq_len, d_model)
+            decoder_output = model.decode(
+                # (B, seq_len, d_model)
+                decoder_input, encoder_output, encoder_mask, decoder_mask)
+            # (B, seq_len, vocab_size)
+            proj_output = model.project(decoder_output)
 
             # Compare the output with the label
-            label = batch['label'].to(device) # (B, seq_len)
+            label = batch['label'].to(device)  # (B, seq_len)
 
             # Compute the loss using a simple cross entropy
-            loss = loss_fn(proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
+            loss = loss_fn(
+                proj_output.view(-1, tokenizer_tgt.get_vocab_size()), label.view(-1))
             batch_iterator.set_postfix({"loss": f"{loss.item():6.3f}"})
 
             # Log the loss
@@ -169,8 +185,27 @@ def train_model(config: dict):
 
             # Backpropagate the loss
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0) # 梯度裁剪
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(), max_norm=1.0)  # 梯度裁剪
             # Update the weights
             optimizer.step()
 
             global_step += 1
+
+        # Run validation at the end of every epoch
+        run_validation(model, val_dataloader, tokenizer_src, tokenizer_tgt,
+                       config['seq_len'], device, lambda msg: batch_iterator.write(msg), global_step, writer)
+
+        # save the model at the end of every epoch
+        model_filename = get_weights_file_path(config, f"{epoch:02d}")
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'global_step': global_step
+        }, model_filename)
+
+
+if __name__ == "__main__":
+    config = get_config()
+    train_model(config)
