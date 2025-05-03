@@ -9,4 +9,5 @@ dependencies = [
     "pathlib>=1.0.1",
     "tokenizers>=0.21.1",
     "torch>=2.6.0",
+    "torchmetrics>=1.7.1",
 ]

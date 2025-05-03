@@ -1,11 +1,12 @@
 from typing import Generator, Dict, Any
 
-import subprocess
+import subprocess, torchmetrics
 
 import torch
 import torch.nn as nn
 from torch.utils.data import random_split, DataLoader
 from torch.utils.tensorboard import SummaryWriter
+
 
 from datasets import load_dataset, Dataset as HFDataset
 from tokenizers import Tokenizer
@@ -96,7 +97,11 @@ def get_model(config: Dict[str, Any], src_vocab_len: int, tgt_vocab_len: int):
     return model
 
 
-def run_validation(model: nn.Module, validation_ds: DataLoader, tokenizer_src: DataLoader, tokenizer_tgt: Tokenizer, max_len: int, device, print_msg: callable, global_step: int, writer: SummaryWriter, num_examples: int = 2):
+def greedy_decode(model: nn.Module, encoder_input: torch.Tensor, encoder_mask: torch.Tensor, tokenizer_src: Tokenizer, tokenizer_tgt: Tokenizer, max_len: int, device):
+    pass
+
+
+def run_validation(model: nn.Module, validation_ds: DataLoader, tokenizer_src: Tokenizer, tokenizer_tgt: Tokenizer, max_len: int, device, print_msg: callable, global_step: int, writer: SummaryWriter, num_examples: int = 2):
     model.eval()
     count = 0
 
@@ -105,7 +110,8 @@ def run_validation(model: nn.Module, validation_ds: DataLoader, tokenizer_src: D
     predicted = []
 
     try:
-        result = subprocess.check_output(['stty', 'size'], stderr=subprocess.DEVNULL)
+        result = subprocess.check_output(
+            ['stty', 'size'], stderr=subprocess.DEVNULL)
         _, console_width = result.decode().split()
         console_width = int(console_width)
     except:
@@ -115,7 +121,52 @@ def run_validation(model: nn.Module, validation_ds: DataLoader, tokenizer_src: D
     with torch.no_grad():
         for batch in validation_ds:
             count += 1
-            
+            encoder_input = batch['encoder_input'].to(device)  # (B, seq_len)
+            encoder_mask = batch['encoder_mask'].to(
+                device)  # (B, 1, 1, seq_len)
+
+            # make sure the batch_size is 1
+            assert encoder_input.size(
+                0) == 1, "Batch size must be 1 for validation"
+
+            model_output = greedy_decode(model, encoder_input, encoder_mask,
+                                         tokenizer_src, tokenizer_tgt, max_len, device)  # type: torch.Tensor
+
+            source_text = batch["src_text"][0]
+            target_text = batch["tgt_text"][0]
+            # The detach() function may be redundant, because we already enable the no_grad decorator
+            model_output_text = tokenizer_tgt.decode(
+                model_output.detach().cpu().numpy())
+            source_texts.append(source_text)
+            expected.append(target_text)
+            predicted.append(model_output_text)
+
+            # Print the source, expected and predicted text
+            print_msg('-'*console_width)
+            print_msg(f"{'SOURCE: ':>12}{source_text}")
+            print_msg(f"{'TARGET: ':>12}{target_text}")
+            print_msg(f"{'PREDICTED: ':>12}{model_output_text}")
+
+            if count == num_examples:
+                print_msg("-"*console_width)
+                break
+
+            if writer:
+                # Evaluate the character error rate
+                # Compute the char error rate
+                metric = torchmetrics.CharErrorRate()
+                cer = metric(predicted, expected)
+                writer.add_scalar('char error rate', cer, global_step)
+
+                # Compute the word error rate
+                metric = torchmetrics.WordErrorRate()
+                wer = metric(predicted, expected)
+                writer.add_scalar('word error rate', wer, global_step)
+
+                # Compute the BLEU score
+                metric = torchmetrics.BLEUScore()
+                bleu = metric(predicted, expected)
+                writer.add_scalar('BLEU score', bleu, global_step)
 
 
 def train_model(config: dict):
