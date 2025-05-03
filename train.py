@@ -1,5 +1,7 @@
 from typing import Generator, Dict, Any
 
+import subprocess
+
 import torch
 import torch.nn as nn
 from torch.utils.data import random_split, DataLoader
@@ -94,8 +96,26 @@ def get_model(config: Dict[str, Any], src_vocab_len: int, tgt_vocab_len: int):
     return model
 
 
-def run_validation(model, validation_ds, tokenizer_src, tokenizer_tgt, max_len, device, print_msg, global_step, writer, num_examples=2):
-    ...
+def run_validation(model: nn.Module, validation_ds: DataLoader, tokenizer_src: DataLoader, tokenizer_tgt: Tokenizer, max_len: int, device, print_msg: callable, global_step: int, writer: SummaryWriter, num_examples: int = 2):
+    model.eval()
+    count = 0
+
+    source_texts = []
+    expected = []
+    predicted = []
+
+    try:
+        result = subprocess.check_output(['stty', 'size'], stderr=subprocess.DEVNULL)
+        _, console_width = result.decode().split()
+        console_width = int(console_width)
+    except:
+        # If we can't get the console width, then we use 80 as default
+        console_width = 80
+
+    with torch.no_grad():
+        for batch in validation_ds:
+            count += 1
+            
 
 
 def train_model(config: dict):

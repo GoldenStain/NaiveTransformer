@@ -81,6 +81,8 @@ class BilinguaDataset(Dataset):
         return {
             "encoder_input": encoder_input, # (seq_len)
             "decoder_input": decoder_input, # (seq_len)
+            # encoder_mask和decoder_mask这里unsqueeze出一个额外维度是为了在和实际输入进行运算的时候能直接广播
+            # 我们的注意力输入：(B, num_heads, seq_len, head_dim)
             "encoder_mask": (encoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int(), # (1, 1, seq_len)
             "decoder_mask": (decoder_input != self.pad_token).unsqueeze(0).int() & causal_mask(decoder_input.size(0)), # (1, seq_len) & (1, seq_len, seq_len) -> broadcast
             "label": label, # label
