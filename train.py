@@ -1,6 +1,7 @@
 from typing import Generator, Dict, Any
 
-import subprocess, torchmetrics
+import subprocess
+import torchmetrics
 
 import torch
 import torch.nn as nn
@@ -16,11 +17,13 @@ from tokenizers.pre_tokenizers import Whitespace
 
 from pathlib import Path
 
-from dataset import BilinguaDataset
+from dataset import BilinguaDataset, causal_mask
 from models import build_transformer
 from config import get_weights_file_path,  latest_weights_file_path, get_config
 
 from tqdm import tqdm
+
+from models import Transformer
 
 
 def get_all_sentences(ds: HFDataset, lang: str) -> Generator[str, None, None]:
@@ -97,8 +100,38 @@ def get_model(config: Dict[str, Any], src_vocab_len: int, tgt_vocab_len: int):
     return model
 
 
-def greedy_decode(model: nn.Module, encoder_input: torch.Tensor, encoder_mask: torch.Tensor, tokenizer_src: Tokenizer, tokenizer_tgt: Tokenizer, max_len: int, device):
-    pass
+def greedy_decode(model: Transformer, encoder_input: torch.Tensor, encoder_mask: torch.Tensor, tokenizer_src: Tokenizer, tokenizer_tgt: Tokenizer, max_len: int, device):
+    sos_idx = tokenizer_tgt.token_to_id('[SOS]')
+    eos_idx = tokenizer_tgt.token_to_id('[EOS]')
+
+    encoder_output = model.encode(encoder_input, encoder_mask)
+    # Initialize the decoder input with the sos token
+    # 这里填充索引而不是填充向量，因为embedding是模型工作的一部分，是模型的第一层
+    decoder_input = torch.empty(1, 1).fill_(
+        sos_idx).type_as(encoder_input).to(device)
+    while True:
+        if decoder_input.size(1) == max_len:
+            break
+
+        # build mask for target
+        decoder_mask = causal_mask(decoder_input.size(
+            1)).type_as(encoder_input).to(device)
+
+        # calculate the output
+        output = model.decode(decoder_input, encoder_output, encoder_mask, decoder_mask)
+
+        # gen next token
+        prob = model.project(output[:, -1])
+        _, next_word = torch.max(prob, dim=1)
+        decoder_input = torch.cat(
+            [decoder_input, torch.empty(1, 1).type_as(encoder_input).fill_(next_word.item()).to(device)],
+            dim=1
+        )
+
+        if next_word == eos_idx:
+            break
+    
+    return decoder_input.squeeze(0)
 
 
 def run_validation(model: nn.Module, validation_ds: DataLoader, tokenizer_src: Tokenizer, tokenizer_tgt: Tokenizer, max_len: int, device, print_msg: callable, global_step: int, writer: SummaryWriter, num_examples: int = 2):
