@@ -118,19 +118,21 @@ def greedy_decode(model: Transformer, encoder_input: torch.Tensor, encoder_mask:
             1)).type_as(encoder_input).to(device)
 
         # calculate the output
-        output = model.decode(decoder_input, encoder_output, encoder_mask, decoder_mask)
+        output = model.decode(decoder_input, encoder_output,
+                              encoder_mask, decoder_mask)
 
         # gen next token
         prob = model.project(output[:, -1])
         _, next_word = torch.max(prob, dim=1)
         decoder_input = torch.cat(
-            [decoder_input, torch.empty(1, 1).type_as(encoder_input).fill_(next_word.item()).to(device)],
+            [decoder_input, torch.empty(1, 1).type_as(
+                encoder_input).fill_(next_word.item()).to(device)],
             dim=1
         )
 
-        if next_word == eos_idx:
+        if next_word.item() == eos_idx:
             break
-    
+
     return decoder_input.squeeze(0)
 
 
@@ -184,6 +186,8 @@ def run_validation(model: nn.Module, validation_ds: DataLoader, tokenizer_src: T
                 print_msg("-"*console_width)
                 break
 
+            # 这里的metric因为没有使用torchmetrics的update方法，所以每次算出来的值都只基于当前的batch
+            # 如果需要综合所有batch的信息，那么需要把metric在循环外定义，并在每次循环时使用update方法
             if writer:
                 # Evaluate the character error rate
                 # Compute the char error rate
