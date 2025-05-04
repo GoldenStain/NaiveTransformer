@@ -43,6 +43,7 @@ class BilinguaDataset(Dataset):
             raise ValueError('Input sentence is too long')
 
         # process encoder_input
+        # add <s> and </s> token
         encoder_input = torch.cat(
             [
                 self.sos_token,
@@ -54,6 +55,7 @@ class BilinguaDataset(Dataset):
         )
 
         # process decoder_input
+        # add only <s> token
         decoder_input = torch.cat(
             [
                 self.sos_token,
@@ -63,11 +65,12 @@ class BilinguaDataset(Dataset):
             dim=0
         )
 
-        # process label (only add EOS token)
+        # process label
+        # add only </s> token
         label = torch.cat(
             [
-                self.sos_token,
                 torch.tensor(dec_input_tokens, dtype=torch.int64),
+                self.eos_token, 
                 torch.tensor([self.pad_token] * dec_pad_cnt, dtype=torch.int64)
             ],
             dim=0
@@ -85,7 +88,7 @@ class BilinguaDataset(Dataset):
             # 我们的注意力输入：(B, num_heads, seq_len, head_dim)
             "encoder_mask": (encoder_input != self.pad_token).unsqueeze(0).unsqueeze(0).int(), # (1, 1, seq_len)
             "decoder_mask": (decoder_input != self.pad_token).unsqueeze(0).int() & causal_mask(decoder_input.size(0)), # (1, seq_len) & (1, seq_len, seq_len) -> broadcast
-            "label": label, # label
+            "label": label, # label, (seq_len)
             "src_text": src_text,
             "tgt_text": tgt_text,
         }
