@@ -47,6 +47,12 @@ class LayerNormalization(nn.Module):
     def __init__(self, eps: float = 1e-6) -> None:
         super().__init__()
         self.eps = eps
+        # 这里我们使用的是一个标量，维度上所有值都共享参数
+        # 这种情况下表达能力较弱
+        # 如果我们把alpha和bias都换成torch.ones(d_model)
+        # 然后让它们和x进行逐元素相乘
+        # 这样每个元素都有自己对应的参数
+        # 模型的表达能力就会极大增强
         self.alpha = nn.Parameter(torch.ones(1))
         self.bias = nn.Parameter(torch.zeros(1))
     
