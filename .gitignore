@@ -15,3 +15,5 @@ sot
 tmp*
 *.dot
 Paddle_*
+
+tokenizer_*

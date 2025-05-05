@@ -17,9 +17,11 @@ class BilinguaDataset(Dataset):
         self.tgt_lang = tgt_lang
 
         # Because the special tokens are used to decode the target language, so here we use tokenizer_tgt instead of tokenizer_src
-        self.sos_token = torch.Tensor([tokenizer_tgt.token_to_id('[SOS]')], dtype=torch.int64)
-        self.eos_token = torch.Tensor([tokenizer_tgt.token_to_id('[EOS]')], dtype=torch.int64)
-        self.pad_token = torch.Tensor([tokenizer_tgt.token_to_id('[PAD]')], dtype=torch.int64)
+        # ATTENTION: torch.Tensor()是一个构造函数，用于创建未初始化的张量。它不支持 dtype 参数，且行为可能与预期不符。
+        # torch.tensor()是一个工厂函数，用于根据输入数据创建张量。它支持 dtype 参数，适合用于从列表或数组创建张量。
+        self.sos_token = torch.tensor([tokenizer_tgt.token_to_id('[SOS]')], dtype=torch.int64)
+        self.eos_token = torch.tensor([tokenizer_tgt.token_to_id('[EOS]')], dtype=torch.int64)
+        self.pad_token = torch.tensor([tokenizer_tgt.token_to_id('[PAD]')], dtype=torch.int64)
 
     def __len__(self) -> int:
         return len(self.ds)

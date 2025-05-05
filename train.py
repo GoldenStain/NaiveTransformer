@@ -33,7 +33,7 @@ def get_all_sentences(ds: HFDataset, lang: str) -> Generator[str, None, None]:
 
 def get_or_build_tokenizer(config: Dict[str, Any], ds: HFDataset, lang: str) -> Tokenizer:
     # .format: insert lang into the {} of the str
-    tokenizer_path = Path(config['tokenizer_path'].format(lang))
+    tokenizer_path = Path(config['tokenizer_file'].format(lang))
     if not Path.exists(tokenizer_path):
         tokenizer = Tokenizer(WordLevel(unk_token='[UNK]'))
         tokenizer.pre_tokenizer = Whitespace()
