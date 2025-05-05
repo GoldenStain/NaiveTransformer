@@ -25,7 +25,9 @@ def get_weights_file_path(config: dict, epoch: str):
     return str(Path('.') / model_folder / model_filename)
 
 # get the latest weight files in the weight folder
-def  latest_weights_file_path(config: dict):
+
+
+def latest_weights_file_path(config: dict):
     model_folder = f"{config['datasource']}_{config['model_folder']}"
     model_filename = f"{config['model_basename']}*"
     weights_files = list(Path(model_folder).glob(model_filename))
