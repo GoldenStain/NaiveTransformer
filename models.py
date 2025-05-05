@@ -40,7 +40,9 @@ class PositionalEmbedding(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # x:(batch_size, seq_len, d_model)
-        x = x + (self.pe[:, :x.shape[1], :]).requires_grad(False) # Here, the pe has been registered, so it is ok to not add the `requires_grad` part. It is not learned by default
+        # ATTENTION: requires_grad是一个字段
+        # requires_grad_加上下划线才是一个方法
+        x = x + (self.pe[:, :x.shape[1], :]).requires_grad_(False) # Here, the pe has been registered, so it is ok to not add the `requires_grad` part. It is not learned by default
         return self.dropout(x)
 
 class LayerNormalization(nn.Module):
