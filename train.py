@@ -38,7 +38,7 @@ def get_or_build_tokenizer(config: Dict[str, Any], ds: HFDataset, lang: str) -> 
         tokenizer = Tokenizer(WordLevel(unk_token='[UNK]'))
         tokenizer.pre_tokenizer = Whitespace()
         trainer = WordLevelTrainer(
-            special_tokens=['[UNK], [SOS], [EOS], [PAD]'], min_frequency=2)
+            special_tokens=['[UNK]', '[SOS]', '[EOS]', '[PAD]'], min_frequency=2)
         tokenizer.train_from_iterator(
             get_all_sentences(ds, lang), trainer=trainer)
         tokenizer.save(str(tokenizer_path))
